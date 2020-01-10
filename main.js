@@ -1,5 +1,12 @@
 'use strict';
 const canvas = document.querySelector('canvas');
+const scrollLeft = (document.querySelector('.container').scrollWidth - document.querySelector('.container').clientWidth) / 2;
+const scrollTop = document.body.scrollHeight
+document.querySelector('.container').scrollLeft = scrollLeft;
+console.log(scrollTop)
+window.scrollTo(0, scrollTop);
+// document.querySelector('.container').style.overflow = 'hidden';
+document.body.style.overflowX = 'hidden';
 
 const CUBE_WIDTH = 64;
 const CUBE_HEIGHT = 74;
@@ -50,7 +57,7 @@ class Game {
             this.updateSelectedCube(e.pageX - 28, e.pageY - 16);
         }
         const touch = e => {
-            this.updateSelectedCube(e.touches[0].pageX - 28, e.touches[0].pageY - 16);
+            this.updateSelectedCube(e.touches[0].pageX - 28 + scrollLeft, e.touches[0].pageY);
         }
         
         this.canvas.onmousedown = e => {
@@ -60,12 +67,13 @@ class Game {
         }
 
         this.canvas.ontouchstart = e => {
-            this.retrieveCollidingCube(e.touches[0].pageX, e.touches[0].pageY);
+            e.preventDefault();
+            this.retrieveCollidingCube(e.touches[0].pageX + scrollLeft, e.touches[0].pageY);
 
             this.canvas.addEventListener('touchmove', touch);
         }
         this.canvas.ontouchend = e => {
-            this.combineSelection(e.changedTouches[0].pageX, e.changedTouches[0].pageY);
+            this.combineSelection(e.changedTouches[0].pageX + scrollLeft, e.changedTouches[0].pageY);
 
             this.canvas.removeEventListener('touchmove', touch);
         }
