@@ -58,7 +58,7 @@ class Game {
 
     createControls() {
         this.controls = [];
-        this.controls.push(new Button(this.canvas.width * 0.8, 0, buttonTextures.refresh, this.generateField.bind(this)));
+        this.controls.push(new Button(this.canvas.width * 0.8, this.canvas.height * 0.3, buttonTextures.refresh, this.generateField.bind(this)));
     }
 
     drawControls() {
@@ -117,7 +117,7 @@ class Game {
         const distribution = this.generateDistribution();
 
         let startX = this.canvas.width / 2;
-        let startY = this.canvas.height / 2;
+        let startY = this.canvas.height / 3 * 2;
 
 
         // Columns Y
