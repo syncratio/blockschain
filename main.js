@@ -1,25 +1,26 @@
 'use strict';
 const canvas = document.querySelector('canvas');
-const scrollLeft = (document.querySelector('.container').scrollWidth - document.querySelector('.container').clientWidth) / 2;
-const scrollTop = document.body.scrollHeight
-document.querySelector('.container').scrollLeft = scrollLeft;
-console.log(scrollTop)
-window.scrollTo(0, scrollTop);
-// document.querySelector('.container').style.overflow = 'hidden';
-document.body.style.overflowX = 'hidden';
 
 const CUBE_WIDTH = 64;
 const CUBE_HEIGHT = 74;
 
+const setCanvasSize = () => {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+}
+setCanvasSize();
+
+window.addEventListener('resize', setCanvasSize);
 const ctx = canvas.getContext('2d');
 ctx.font = 'bold 13px serif';
 
 const assets = [
-    'blue', 'darkBlue', 'orange', 'purple'
+    'blue', 'darkBlue', 'orange', 'purple', 'refresh'
 ];
 
 let game;
 let cubeTextures;
+let buttonTextures;
 
 class Game {
     constructor(context, canvas) {
@@ -32,15 +33,18 @@ class Game {
         this.releasedCube = null;
         this.combinations = null;
         this.loopID = null;
+        this.controls = [];
 
         this.generateField();
         this.drawField();
         this.listenToCanvasEvents();
+        this.createControls();
     }
 
     loop() {
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         this.drawField();
+        this.drawControls();
         this.loopID = requestAnimationFrame(this.loop.bind(this));
     }
     startLoop() {
@@ -52,12 +56,21 @@ class Game {
         this.loopID = null;
     }
 
+    createControls() {
+        this.controls = [];
+        this.controls.push(new Button(this.canvas.width * 0.8, 0, buttonTextures.refresh, this.generateField.bind(this)));
+    }
+
+    drawControls() {
+        for (const c of this.controls) c.draw(this.ctx);
+    }
+
     listenToCanvasEvents() {
         const mousemove = e => {
             this.updateSelectedCube(e.pageX - 28, e.pageY - 16);
         }
         const touch = e => {
-            this.updateSelectedCube(e.touches[0].pageX - 28 + scrollLeft, e.touches[0].pageY);
+            this.updateSelectedCube(e.touches[0].pageX - 28, e.touches[0].pageY);
         }
         
         this.canvas.onmousedown = e => {
@@ -66,27 +79,30 @@ class Game {
             this.canvas.addEventListener('mousemove', mousemove);
         }
 
-        this.canvas.ontouchstart = e => {
+        this.canvas.ontouchstart = (e) => {
+            const {pageX, pageY} = e.touches[0];
             e.preventDefault();
-            this.retrieveCollidingCube(e.touches[0].pageX + scrollLeft, e.touches[0].pageY);
+            const btn = this.controls.find(c => c.isClicked(pageX, pageY));
+            if (btn) return btn.callback();
+            if (this.selectedCube) this.returnSelectedCube();
+            this.retrieveCollidingCube(pageX, pageY);
 
             this.canvas.addEventListener('touchmove', touch);
         }
         this.canvas.ontouchend = e => {
-            this.combineSelection(e.changedTouches[0].pageX + scrollLeft, e.changedTouches[0].pageY);
+            this.combineSelection(e.changedTouches[0].pageX, e.changedTouches[0].pageY);
 
             this.canvas.removeEventListener('touchmove', touch);
         }
         
         this.canvas.onmouseup = e => {
             game.combineSelection(e.pageX, e.pageY);
-        
             canvas.removeEventListener('mousemove', mousemove);
         }
     }
 
     drawField() {
-        if (this.cubes.length < 1) return;
+        if (this.cubes.length <= 4) return;
 
         for (const c of this.cubes) {
             if (c === this.selectedCube) continue;
@@ -263,7 +279,7 @@ class Game {
     combinationEffect(targetCube) {
         let {x, y} = targetCube;
         x += randomUpTo(CUBE_WIDTH);
-        const score = targetCube.score;
+        const {score} = targetCube;
         let angle = 0;
         let id;
 
@@ -272,16 +288,14 @@ class Game {
             this.ctx.rotate(Math.PI / 180 * angle);
             
             this.ctx.fillText(score, 0, 0);
-            
             this.ctx.setTransform(1, 0, 0, 1, 0, 0);
-            
             y--;
             angle++;
 
             id = requestAnimationFrame(f);
-        }
+        };
 
-        id = f();
+        f();
 
         setTimeout(() => {
             cancelAnimationFrame(id);
@@ -379,6 +393,25 @@ class Cube {
     }
 }
 
+class Button {
+    constructor(x, y, image, callback) {
+        this.x = x;
+        this.y = y;
+        this.image = image;
+        this.width = image.width;
+        this.height = image.height;
+        this.callback = callback;
+    }
+
+    draw(ctx) {
+        ctx.drawImage(this.image, this.x, this.y);
+    }
+
+    isClicked(x, y) {
+        return (this.x < x && this.x + this.width > x) && (this.y < y && this.y + this.height > y);
+    }
+}
+
 class Point {
     constructor(x, y){
         this.x = x;
@@ -460,7 +493,7 @@ function getIndex(i = 0, j = 0, z = 0) {
 const assetManager = new AssetManager(assets);
 
 assetManager.loadAssets('./assets/').then(loadedAssets => {
-    const [blue, darkBlue, orange, purple] = loadedAssets;
+    const [blue, darkBlue, orange, purple, refresh] = loadedAssets;
 
     cubeTextures = {
         0: blue,
@@ -468,6 +501,10 @@ assetManager.loadAssets('./assets/').then(loadedAssets => {
         2: orange,
         3: purple
     };
+
+    buttonTextures = {
+        refresh
+    }
     game = new Game(ctx, canvas);
     game.startLoop();
 })
